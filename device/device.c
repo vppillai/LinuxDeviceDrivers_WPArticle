@@ -51,6 +51,7 @@ int device_init(void)
 	}
 	else
 	{
+		/*intiialize the cdev struct with fops. this can even be done directly (device_cdev->ops=&cdev_fops)*/
 		cdev_init(device_cdev,&device_fops);
 		status=cdev_add(device_cdev,deviceNumber,1);
 		if(!status)
@@ -58,6 +59,7 @@ int device_init(void)
 			printk(KERN_ALERT"cdev_add failed");
 			return(status);
 		}
+		/*allocate memory for device. Again, this is an overkill for a byte. But kept here for API ref*/
 		deviceMemory=kmalloc(sizeof(char),GFP_KERNEL);
 		if(NULL==deviceMemory)
 		{
@@ -73,11 +75,15 @@ int device_init(void)
 	return 0;
 }
 
+/*This function will be called whenever an open syscall is made on the device file. If this fop is null, it will return success by default*/
 int device_open (struct inode *inodep, struct file *filep)
 {
 	printk(KERN_ALERT"device opened\n");
 	return 0;
 }
+
+/*write syscall backend. we will write a single byte of data into the device using this call and fail the operation if 
+request is not for a simgle byte. so use echo -n <data> > /dev/device */
 ssize_t device_write (struct file *filep, const char __user *buffer, size_t size, loff_t *offsetp)
 {
 	int status;
@@ -88,6 +94,7 @@ ssize_t device_write (struct file *filep, const char __user *buffer, size_t size
 	}
 	else
 	{
+		/*copy buffer containing data to kernel space into our device buffer*/
 		status=copy_from_user(deviceMemory,buffer,1);
 		if(0==status)
 		{
@@ -100,26 +107,32 @@ ssize_t device_write (struct file *filep, const char __user *buffer, size_t size
 		}
 	}
 }
+
+/*read syscall backend. */
 ssize_t device_read (struct file *filep, char __user *userp, size_t size, loff_t *offsetp)
 {
+	/*if teh intentio is to read the 0th position of the file*/
 	if(*offsetp==0)
 	{
 		copy_to_user(userp,deviceMemory,1);
-		*offsetp=1;
-		return 1;
+		*offsetp=1;/*move new current position*/
+		return 1; /*number of bytes read*/
 	}
-	else
+	else /*any position other than 0*/
 	{
 		*offsetp=0;
-		return 0;
+		return 0;/*no bytes read*/
 	}
 }
 
+/*for each fclose*/
 int device_release (struct inode *inodep, struct file *filep)
 {
 	printk(KERN_ALERT"device released\n");
 	return 0;
 }
+
+/*cleanup function for modeule remove*/
 void device_exit(void)
 {
 	if(NULL!=deviceMemory)
