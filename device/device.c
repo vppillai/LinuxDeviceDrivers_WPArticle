@@ -47,7 +47,7 @@ int device_init(void)
   if(NULL==device_cdev)
   {
     printk(KERN_ALERT"failed allocating cdev\n");
-    return -errno;
+    return -1;
   }
   else
   {
@@ -69,6 +69,7 @@ int device_init(void)
     }
     else
     {
+      *deviceMemory=0;
       printk(KERN_ALERT"module - device -inserted\n");
     }
   }
