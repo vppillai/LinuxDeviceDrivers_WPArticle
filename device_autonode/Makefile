@@ -1,0 +1,1 @@
+obj-m = device.o
