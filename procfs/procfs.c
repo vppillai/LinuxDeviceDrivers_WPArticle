@@ -13,12 +13,26 @@ struct file_operations procfs_fops=
 
 int procfs_init(void)
 {
-  proc_create("procfs",0,NULL,&procfs_fops);
+  static struct proc_dir_entry* procfs_entry;
+  int status;
+  procfs_entry = proc_create("procfs",0,NULL,&procfs_fops);
+  status=IS_ERR(procfs_entry);
+  if(0!=status)
+  {
+    printk(KERN_ALERT"error creating entry in procfs\n");
+    return -status;
+  }
+  else
+  {
+    printk(KERN_ALERT"procfs entry created\n");
+  }
   return 0;
 }
 
 void procfs_exit(void)
 {
+  remove_proc_entry("procfs",NULL);
+  printk(KERN_ALERT"procfs entry removed\n");
 }
 
 ssize_t procfs_read (struct file *filep, char __user *pBuffer, size_t size, loff_t *pOffset)
